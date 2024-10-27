@@ -1,0 +1,208 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+# Introducción:
+# Este código tiene como propósito analizar y determinar cuáles son las carreteras más bloqueadas 
+# por narcobloqueos en el estado de Michoacán. Para ello, se procesan datos geoespaciales y 
+# se realiza un análisis de frecuencias de bloqueos registrados en diversas rutas. El objetivo 
+# es proporcionar una visión clara de las zonas de alta incidencia, lo que puede ser útil para 
+# tomar decisiones estratégicas en temas de seguridad, movilidad y prevención.
+```
+
+```{r}
+# Paso 1: Instalar el paquete writexl si no está instalado
+# Este paquete me permite exportar archivos Excel desde R
+install.packages("writexl")
+```
+
+```{r}
+# Paso 2: Cargar las librerías necesarias
+# sf: Manejo de datos espaciales como archivos SHP
+# mapview: Visualización de mapas interactivos
+# writexl: Exportación de datos a Excel
+library(sf)
+library(mapview)
+library(writexl)
+
+library(sf)
+library(mapview)
+library(writexl)
+```
+
+```{r}
+# Paso 3: Leer el archivo SHP
+# Especifico la ruta del archivo SHP que quiero analizar
+# Ruta al archivo SHP (sin extensión, ya que un SHP viene con varios archivos .shp, .shx, .dbf, etc.)
+shp_file <- "C:/Users/Diego/Documents/Michoacan"
+
+# Leer el archivo SHP usando st_read de sf
+shp_sf <- st_read(shp_file)
+
+```
+
+```{r}
+# Paso 4: Visualizar el contenido del archivo SHP
+# Utilizo View() para inspeccionar visualmente los datos cargados
+View(shp_sf)
+```
+
+
+
+```{r}
+# Paso 5: Definir carreteras bloqueadas
+# A continuación, defino las listas de nombres de las carreteras bloqueadas
+# Cada bloque contiene nombres de carreteras de diferentes regiones
+
+# Lista de nombres de carreteras a filtrar, dividida en varias partes
+carreteras_bloqueadas_1 <- c(
+  "Apatzingán - Aguililla", "T.C. (Apatzingán - Aguililla) - El Recreo", "Apatzingán", 
+  "Valle de Apatzingán", "Ramal a Ejido Apatzingán", "Apatzingán - Presa del Rosario", 
+  "Apatzingán - Acahuato", "Ramal a la Huerta - T.C. Cuatro Caminos - Apatzingán", 
+  "El Limón - T.C. (Apatzingán - Aguililla)", "Erongarícuaro - La Zarzamora - David Franco Reyes", 
+  "Erongarícuaro - La Zarzamora - David Franco Reyes", "Pátzcuaro-Erongarícuaro-Chupícuaro", 
+  "E.C. (Pátzcuaro - Erongarícuaro) - Ajuno", "Quiroga - Tepalcatepec", 
+  "T.C. (Quiroga - Tepalcatepec) - La Sandía - Buen Suceso"
+)
+
+carreteras_bloqueadas_2 <- c(
+  "T.C. (Buenavista - Tepalcatepec) - Felipe Carrillo Puerto", "Tepalcatepec - Coalcoman - Aquila", 
+  "Tepalcatepec - Coalcomán - Aquila - T.C. (Acalpican - Tecomán) - [Ramal a Aquila]", 
+  "San Juan de los Plátanos - T.C. (Quiroga - Tepalcatepec)", "Comisión Tepalcatepec", 
+  "Libramiento de Tepalcatepec", "Jilotlán de los Dolores - Tepalcatepec", "Río Tepalcatepec", 
+  "La Nopalera Oriente (La Nopalera) - T.C. Quiroga - Tepalcatepec", 
+  "Los Olivos (Jalisco) - T.C. (Quiroga - Tepalcatepec)", 
+  "Jacona - Los Reyes - Peribán - Buenavista", "San Diego Buenavista - Guadalupe Sur - La Palma"
+)
+
+carreteras_bloqueadas_3 <- c(
+  "Buenavista", "El Rodeo - Buenavista - Benito Juárez", 
+  "Ramal Buenavista (San Miguel Buenavista)", "Santa Ana - Buenavista", 
+  "Ramal a El Escobal - Buenavista", "Paso por Buenavista", "Ramal a San Juan Buenavista", 
+  "Jacona - Los Reyes - Peribán - Buenavista", "T.C. (Buenavista - Tepalcatepec) - Felipe Carrillo Puerto", 
+  "San Jerónimo - Cañada de Buenavista 3ra Etapa", "San Diego Buenavista - Guadalupe Sur - La Palma"
+)
+
+carreteras_bloqueadas_4 <- c(
+  "T.C. (Peribán - Buenavista) - Batillero (Pateyero)", "Sahuayo - Jiquilpan", 
+  "T.C. (Briseñas - Sahuayo) - Pajacuarán - La Luz - T.C. (Zamora - La Barca)", 
+  "T.C. (Morelia - Jiquilpan) - Coeneo - Huaniqueo", "T.C. (Morelia - Jiquilpan) - Coeneo - Huaniqueo", 
+  "E.C. (Zinapécuaro - Acámbaro) - Araró", "Tiradores - T.C. (Ciudad Hidalgo - Zinapécuaro) Ramal a San Antonio Tiradores", 
+  "T.C. (Zinapécuaro - Morelia) - El Calvario", "T.C. (Acámbaro - Zinapécuaro) - Simirao - Araró", 
+  "E.C.(Morelia-Zinapécuaro)-La Purísima - Chehuayo - Palo Blanco"
+)
+
+carreteras_bloqueadas_5 <- c(
+  "Acámbaro - Zinapécuaro", "Tepalcatepec - Coalcomán - Aquila - T.C. (Acalpican - Tecomán) - [Ramal a Aquila]", 
+  "T.C. (Coalcomán - Aquila) - Villa Victoria", "Tepalcatepec - Coalcomán - Aquila - T.C. (Acalpican - Tecomán) - Gaza II - Entronque Aquila", 
+  "Libramiento de Coalcomán", "Parácuaro - Los Bancos - Las Ordeñitas", "Parácuaro - Los Puertecitos", 
+  "Uspero - Parácuaro", "Boca de Apiza - San Vicente - Coahuayana Viejo - Palos Marias", 
+  "Ramal a Coahuayana", "San Vicente - Nuevo Coahuayana - El Ticuiz", "Zapotán - Nuevo Coahuayana"
+)
+
+carreteras_bloqueadas_6 <- c(
+  "Álvaro Obregón", "General Álvaro Obregón", "Álvaro Obregón Sur", "Portal Álvaro Obregón", 
+  "Álvaro Obregón Oriente", "Álvaro Obregón Poniente", "Indaparapeo - Álvaro Obregón", 
+  "Álvaro Obregón - El Venado", "Zamora - Vista Hermosa", "Zamora - Ario de Rayón - El Llano - Chavinda - E.C. (Zamora - Jiquilpan)"
+)
+
+carreteras_bloqueadas_7 <- c(
+  "Libramiento Norte de Zamora", "Libramiento Sur de Zamora", "Zamora - Atecucario - El Sáuz de Abajo", 
+  "T.C. (Libramiento Norte de Zamora) - Romero de Torres - Romero de Guzmán", "Zamora - Briseñas", 
+  "Zamora - Aquiles Serdán - La Ladera", "T.C. (Briseñas - Sahuayo) - Pajacuarán - La Luz - T.C. (Zamora - La Barca)", 
+  "Las Zarquillas - T.C. (Zamora - Jiquilpan)", "Zamora - Atecucario - El Sáuz de Abajo"
+)
+
+carreteras_bloqueadas_8 <- c(
+  "San Esteban T.C. (Zamora - Guadalajara)", "T.C. (Zamora - Briseñas) - Camucuato", 
+  "Independencia - La Labor - T.C. (Zamora - Atacheo)", "San José de Vargas - T.C. (Zamora - La Piedad)", 
+  "Zamora", "Jacal del Gato - Los Cerritos - T.C. (Zamora - Jiquilpan)", 
+  "T.C. (Zamora - Briseñas) - El Capulín", "El Sauz de Magaña - T.C. (Zamora - Atacheo)", 
+  "El Guamúchil - T.C. (Zamora - Atacheo)", "Ario de Rayón - T.C. (Zamora - Briseñas)", "Riveras de Zamora"
+)
+
+carreteras_bloqueadas_9 <- c(
+  "T.C. (Briseñas - Sahuayo) - (Pajacuarán - La Luz) - T.C. (Zamora - La Barca)", 
+  "T.C. (Zamora - Briseñas) - El Capulín", "T.C. (Zamora - La Piedad) - Los Guajes", 
+  "Zamora - La Piedad", "Acámbaro - Morelia", "Acceso a Recinto Ferial de Morelia", "Atlacomulco - Morelia", 
+  "Carretera Morelia-Queréndaro", "Chehuayito - Benito Juárez - T.C. (Morelia - Salamanca)"
+)
+
+carreteras_bloqueadas_10 <- c(
+  "E.C. (Maravatío - Morelia) - Uripitío", "E.C. (Morelia - Jiquilpan) - Francisco J. Mujica", 
+  "E.C. (Morelia - Jiquilpan) - Gomez Farias - San Antonio", "E.C. (Morelia - Jiquilpan) - Paso por Capula", 
+  "E.C. (Morelia - Pátzcuaro) - Cuanajo", "E.C. (Morelia - Pátzcuaro) - Ojo de Agua de Pastores", 
+  "E.C. (Toluca - Morelia) - Tecnológico de Zitácuaro", "E.C.(Morelia-Zinapécuaro)-La Purísima - Chehuayo - Palo Blanco",
+  "El Calvario - (Morelia - Zinapecuaro)", "El Jazmín - T.C. (Toluca - Morelia)", "El Vaquerito - T.C. (Morelia - Mil Cumbres)"
+)
+
+# Agregamos las carreteras faltantes
+carreteras_bloqueadas_11 <- c(
+  "Fuentes de Morelia", "Libramiento Sur de Morelia Ramal Camelinas", "Manantiales de Morelia",
+  "Mirador Morelia", "Morelia", "Morelia - Aeropuerto - Ent. (Maravatío - Zapotlanejo)",
+  "Morelia - Atécuaro", "Morelia - Huetamo Tramo: Tiripetío - Eréndira", "Morelia - Jiquilpan",
+  "Morelia - Pátzcuaro", "Morelia - Salamanca", "Morelia - Torreón Nuevo - Chiquimitío",
+  "Pátzcuaro-Morelia", "San Agustín del Maíz - Arumbaro - Ent. (Morelia - Salamanca)",
+  "San Lucas Huarirapeo - T.C. (Toluca - Morelia)", "T.C. (Acámbaro - Morelia) - Estación Queréndaro",
+  "T.C. (Atlacomulco - Morelia) - Irapeo", "T.C. (Atlacomulco - Morelia) - San Juan Tlalpujahuilla",
+  "T.C. (Libramiento Poniente de Morelia) - San Juanito Itzícuaro", "T.C. (Maravatío - Morelia) - Heriberto Jara",
+  "T.C. (Maravatío - Morelia) - Jeráhuaro", "T.C. (Maravatío - Morelia) - Santiago Puriatzícuaro",
+  "T.C. (Maravatío - Morelia) - Ucareo - T.C. (Los Azufres)", "T.C. (Morelia - Jiquilpan) - Cointzio - La Huerta",
+  "T.C. (Morelia - Jiquilpan) - Cuto de la Esperanza - Teremendo", "T.C. (Morelia - Jiquilpan) - Tacícuaro",
+  "T.C. (Morelia - Lázaro Cárdenas) - T.C. (Tingambato - Santa Isabel de Ajuno)", "T.C. (Morelia - Pátzcuaro) - El Reparo",
+  "T.C. (Morelia - Quiroga) - Joyitas - San Bernabé", "T.C. (Morelia - Salamanca) - Copándaro",
+  "T.C. (Morelia - Salamanca) - Copándaro - Chucándiro - T.C. (Cuitzeo - Zináparo)", "T.C. (Morelia Lázaro Cárdenas) - El Tarascón",
+  "T.C. (Toluca - Morelia) - Maravatío", "Toluca - Morelia"
+)
+
+carreteras_bloqueadas_12 <- c(
+  "Santiago Tangamandapio - El Cerezo - El Saucillo", "Jacona - Villafuerte",
+  "T.C. (Jacona - Los Reyes) - Aquiles Serdán", "T.C. (Jacona - Los Reyes) - Atapan",
+  "T.C. (Jacona - Los Reyes) - Chaniro - La Tinaja", "T.C. (Jacona - Los Reyes) - Tocumbo - Cotija - Puente Jaripo",
+  "Aranza - Cheranástico - T.C. (Carapan - Uruapan)", "Carretera Uruapan-Pátzcuaro",
+  "E.C. (Carapan - Uruapan) - Santa Cruz Tanaco - Huecato", "E.C. (Carapan-Uruapan)-Quinceo",
+  "E.C. (Pátzcuaro - Uruapan) - Zirahuén - Santa Clara del Cobre", "E.C.(Pátzcuaro-Uruapan)-Pichátaro-Nahuatzen-Cherán",
+  "Entronque Pátzcuaro - Uruapan - Tanques de Sedimentación", "Mártires de Uruapan", "Pátzcuaro - Uruapan",
+  "Pomacuarán - T.C. (Carapan - Uruapan)", "T.C. (Carapan - Uruapan) - Quinceo - Arantepacua",
+  "T.C. (Pátzcuaro - Uruapan) - Pichátaro - Nahuatzen - Cherán", "T.C. (Pátzcuaro - Uruapan) - San Ángel Zurumucapio - Ziracuaretiro",
+  "T.C. (Uruapan - Taretan) - Emiliano Zapata - San Marcos", "Uruapan",
+  "Uruapan - Nueva Italia", "Uruapan - San Juan Nuevo - Tancítaro - El Copetiro",
+  "Uruapan - Taretan - La Guadalupe", "La Laguneta - T.C. (Tocumbo - Cotija)",
+  "T.C. (Tocumbo - Cotija) - Puente Jaripo"
+)
+
+# Unimos todas las partes en un solo vector
+carreteras_bloqueadas <- c(
+  carreteras_bloqueadas_1, carreteras_bloqueadas_2, carreteras_bloqueadas_3, carreteras_bloqueadas_4,
+  carreteras_bloqueadas_5, carreteras_bloqueadas_6, carreteras_bloqueadas_7, carreteras_bloqueadas_8,
+  carreteras_bloqueadas_9, carreteras_bloqueadas_10, carreteras_bloqueadas_11, carreteras_bloqueadas_12
+)
+
+# Filtrar las carreteras afectadas
+carreteras_sf <- shp_sf %>%
+  dplyr::filter(NOMBRE %in% carreteras_bloqueadas)
+
+# Visualizar las carreteras afectadas
+mapview(carreteras_sf, color = "red")
+```
+
+```{r}
+# Conclusión:
+# A partir del análisis de las carreteras más bloqueadas en Michoacán, se ha identificado un 
+# patrón significativo en algunas rutas clave que presentan una alta incidencia de narcobloqueos. 
+# Entre las rutas más afectadas destacan las siguientes:
+# 
+# 1. Apatzingán - Aguililla y sus ramales, que se presentan como un corredor crítico 
+#    debido a la alta frecuencia de incidentes reportados.
+# 2. La carretera Tepalcatepec - Coalcomán - Aquila es otro tramo sumamente afectado, 
+#    lo que sugiere problemas de seguridad persistentes en esa región.
+# 3. Buenavista y sus alrededores figuran también entre los focos de mayor actividad 
+#    criminal, con múltiples reportes de bloqueos.
+# 4. Las zonas alrededor de Zamora, incluyendo el libramiento y las conexiones a municipios 
+#    cercanos, muestran un patrón de bloqueos que impacta tanto la seguridad como la movilidad.
+```
+
+
+
+
